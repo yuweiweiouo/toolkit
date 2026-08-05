@@ -10,6 +10,26 @@ interface ParsedTimestamp {
   nanoseconds: bigint;
 }
 
+interface TimezoneOption {
+  value: string;
+  name: string;
+}
+
+const timezoneOptions: TimezoneOption[] = [
+  { value: 'Asia/Taipei', name: '台灣標準時間' },
+  { value: 'Asia/Seoul', name: '韓國標準時間' },
+  { value: 'Asia/Tokyo', name: '日本標準時間' },
+  { value: 'Asia/Shanghai', name: '中國標準時間' },
+  { value: 'Asia/Hong_Kong', name: '香港時間' },
+  { value: 'Asia/Singapore', name: '新加坡時間' },
+  { value: 'America/New_York', name: '美國東部時間' },
+  { value: 'America/Chicago', name: '美國中部時間' },
+  { value: 'America/Denver', name: '美國山區時間' },
+  { value: 'America/Los_Angeles', name: '美國太平洋時間' },
+  { value: 'Europe/London', name: '英國時間' },
+  { value: 'UTC', name: '協調世界時間' },
+];
+
 const emit = defineEmits<{ notice: [message: string, type?: 'success' | 'info' | 'error'] }>();
 const unit = ref<TimeUnit>('seconds');
 const live = ref(true);
@@ -78,6 +98,23 @@ function setUnit(nextUnit: TimeUnit): void {
   timestamp.value = live.value ? nowValue() : parsed ? formatDateAsTimestamp(parsed.date, nextUnit) : timestamp.value;
 }
 
+function formatTimezoneOffset(date: Date | null, timeZone: string): string {
+  const referenceDate = date ?? new Date();
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: '2-digit',
+    timeZoneName: 'longOffset',
+  }).formatToParts(referenceDate);
+  const offset = parts.find((part) => part.type === 'timeZoneName')?.value ?? 'GMT';
+  if (offset === 'GMT' || offset === 'UTC') return 'UTC+0';
+
+  const match = offset.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+  if (!match) return offset.replace('GMT', 'UTC');
+
+  const [, sign, hours, minutes] = match;
+  return `UTC${sign}${hours}${minutes && minutes !== '00' ? `:${minutes}` : ''}`;
+}
+
 const parsedTimestamp = computed(() => parseTimestamp(timestamp.value, unit.value));
 const currentDate = computed(() => parsedTimestamp.value?.date ?? null);
 const isValid = computed(() => currentDate.value !== null);
@@ -86,6 +123,12 @@ const milliseconds = computed(() => currentDate.value ? String(currentDate.value
 const nanoseconds = computed(() => parsedTimestamp.value?.nanoseconds.toString() ?? '-');
 const iso = computed(() => currentDate.value?.toISOString() ?? '-');
 const utc = computed(() => currentDate.value?.toUTCString() ?? '-');
+const selectedTimezone = computed(() => timezoneOptions.find((option) => option.value === timezone.value));
+const selectedTimezoneOffset = computed(() => formatTimezoneOffset(currentDate.value, timezone.value));
+const timezoneChoices = computed(() => timezoneOptions.map((option) => ({
+  ...option,
+  offset: formatTimezoneOffset(currentDate.value, option.value),
+})));
 const localTime = computed(() => currentDate.value
   ? new Intl.DateTimeFormat('zh-TW', { timeZone: timezone.value, dateStyle: 'medium', timeStyle: 'medium', hour12: false }).format(currentDate.value)
   : '-');
@@ -143,7 +186,7 @@ const results = computed(() => [
   { key: 'seconds', label: 'Unix 時間戳記 (秒)', value: seconds.value, wide: false },
   { key: 'milliseconds', label: 'Unix 時間戳記 (毫秒)', value: milliseconds.value, wide: false },
   { key: 'nanoseconds', label: 'Unix 時間戳記 (奈秒 / ns)', value: nanoseconds.value, wide: false },
-  { key: 'local', label: `所選時區時間 (${timezone.value})`, value: localTime.value, wide: true },
+  { key: 'local', label: `所選時區時間 (${selectedTimezone.value?.name ?? timezone.value} · ${selectedTimezoneOffset.value})`, value: localTime.value, wide: true },
   { key: 'era', label: '日本和曆表記', value: japaneseEra.value, wide: false },
   { key: 'relative', label: '相對時間', value: relative.value, wide: false },
   { key: 'iso', label: 'ISO 8601 String', value: iso.value, wide: false },
@@ -164,8 +207,15 @@ const results = computed(() => [
     <section class="panel input-panel">
       <div class="two-column-fields">
         <div class="field-group">
-          <div class="field-label-row"><label for="timestamp">Unix 時間戳記</label><select :value="unit" class="unit-select" aria-label="Unix 時間戳記單位" @change="setUnit(($event.target as HTMLSelectElement).value as TimeUnit)"><option value="seconds">seconds · 秒</option><option value="milliseconds">milliseconds · 毫秒</option><option value="nanoseconds">nanoseconds · 奈秒</option></select></div>
-          <input id="timestamp" v-model="timestamp" class="text-input mono-input" type="text" placeholder="輸入時間戳記..." @input="live = false" />
+          <div class="field-label-row"><label for="timestamp">Unix 時間戳記</label></div>
+          <div class="timestamp-input-group">
+            <input id="timestamp" v-model="timestamp" class="timestamp-value-input mono-input" type="text" placeholder="輸入時間戳記..." @input="live = false" />
+            <select :value="unit" class="unit-select" aria-label="Unix 時間戳記單位" @change="setUnit(($event.target as HTMLSelectElement).value as TimeUnit)">
+              <option value="seconds">seconds · 秒</option>
+              <option value="milliseconds">milliseconds · 毫秒</option>
+              <option value="nanoseconds">nanoseconds · 奈秒</option>
+            </select>
+          </div>
         </div>
         <div class="field-group">
           <label for="date-picker">或直接選擇日期時間</label>
@@ -181,7 +231,7 @@ const results = computed(() => [
     <section class="panel result-panel">
       <div class="result-heading">
         <h2><Globe2 :size="17" />轉換結果與時區設定</h2>
-        <label class="timezone-select"><span>時區</span><select v-model="timezone"><option value="Asia/Taipei">Asia/Taipei (UTC+8)</option><option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option><option value="UTC">UTC</option><option value="America/New_York">America/New_York</option><option value="Europe/London">Europe/London</option></select></label>
+        <label class="timezone-select"><span>時區</span><select v-model="timezone"><option v-for="option in timezoneChoices" :key="option.value" :value="option.value">{{ option.name }} · {{ option.offset }}</option></select></label>
       </div>
       <div v-if="!isValid" class="error-box">請輸入有效的數字時間戳記。</div>
       <div v-else class="result-grid">

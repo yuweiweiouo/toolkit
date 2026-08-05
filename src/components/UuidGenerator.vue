@@ -134,9 +134,9 @@ function download(): void {
 
     <section class="panel output-panel">
       <div class="panel-toolbar">
-        <div class="toolbar-title"><Hash :size="16" /><span>共產出 <b>{{ uuids.length }}</b> 個 UUIDs</span><span v-if="filter" class="muted">符合 {{ filtered.length }} 個</span></div>
-        <div class="toolbar-actions">
-          <label class="inline-search"><Filter :size="13" /><input v-model="filter" type="search" placeholder="過濾搜尋..." /></label>
+         <div class="toolbar-title"><Hash :size="16" /><span>共產出 <b>{{ uuids.length }}</b> 個 UUIDs</span><span v-if="filter" class="muted">符合 {{ filtered.length }} 個</span></div>
+         <div class="toolbar-actions">
+           <label class="inline-search"><Filter :size="13" /><input v-model="filter" type="search" placeholder="過濾搜尋..." /></label>
           <button type="button" class="button button-light" @click="copy(output)"><Check v-if="copiedAll" :size="14" /><Copy v-else :size="14" />{{ copiedAll ? '已複製全部' : '複製全部' }}</button>
           <button type="button" class="button button-dark" @click="download"><Download :size="14" />下載文件</button>
         </div>

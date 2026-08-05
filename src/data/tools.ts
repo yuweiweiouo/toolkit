@@ -42,6 +42,13 @@ export const tools: ToolMeta[] = [
     icon: 'Hash',
   },
   {
+    id: 'list',
+    name: 'List 清單處理器',
+    category: 'dev-gen',
+    description: '清單去重、排序、清除空白列，快速整理文字列表。',
+    icon: 'List',
+  },
+  {
     id: 'sql',
     name: 'SQL 格式化工具',
     category: 'dev-gen',

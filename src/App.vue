@@ -9,6 +9,7 @@ import {
   Grid2X2,
   Hash,
   KeyRound,
+  List as ListIcon,
   Search,
   ShieldCheck,
   Star,
@@ -24,6 +25,7 @@ import type { CategoryId, ToastMessage, ToastType, ToolId } from './types';
 import { categories, tools } from './data/tools';
 import { readStorage, writeStorage } from './utils';
 import UuidGenerator from './components/UuidGenerator.vue';
+import ListTool from './components/ListTool.vue';
 import DateTimeConverter from './components/DateTimeConverter.vue';
 import Base64Tool from './components/Base64Tool.vue';
 import JwtTool from './components/JwtTool.vue';
@@ -43,6 +45,7 @@ const iconMap: Record<string, Component> = {
   Hash,
   Info,
   KeyRound,
+  List: ListIcon,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -54,6 +57,7 @@ const iconMap: Record<string, Component> = {
 
 const toolComponents: Record<ToolId, Component> = {
   uuid: UuidGenerator,
+  list: ListTool,
   datetime: DateTimeConverter,
   base64: Base64Tool,
   jwt: JwtTool,

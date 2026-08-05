@@ -24,6 +24,6 @@ npm run preview
 2. 在 repository 的 **Settings → Pages → Build and deployment** 將 Source 設為 **GitHub Actions**。
 3. 之後每次 push 到 `main`，Actions 會自動安裝依賴、執行 typecheck/build，並部署 `dist/`。
 
-此專案使用自訂網域 `toolbox.yuweiwei.com`，Vite 的 `base` 固定為 `/`，資源會從 `https://toolbox.yuweiwei.com/assets/` 載入。`public/CNAME` 會在建置時一併複製到 `dist/`，保留 GitHub Pages 的自訂網域設定。
+此專案使用自訂網域 `toolkit.yuweiwei.com`，Vite 的 `base` 固定為 `/`，資源會從 `https://toolkit.yuweiwei.com/assets/` 載入。`public/CNAME` 會在建置時一併複製到 `dist/`，保留 GitHub Pages 的自訂網域設定。
 
 WHOIS 與 IP 查詢會從瀏覽器連線公開 RDAP / IP API；其餘轉換工具均在本機執行。

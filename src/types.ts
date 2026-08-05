@@ -1,5 +1,6 @@
 export type ToolId =
   | 'uuid'
+  | 'list'
   | 'datetime'
   | 'base64'
   | 'jwt'
