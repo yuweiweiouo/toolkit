@@ -1,4 +1,4 @@
-# Wabi Toolkit
+# Yuzi Toolkit
 
 以 Vue 3 + Vite 重製的瀏覽器端開發者工具箱。
 

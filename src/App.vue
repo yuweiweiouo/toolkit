@@ -65,7 +65,7 @@ const toolComponents: Record<ToolId, Component> = {
 const activeCategory = ref<CategoryId>('all');
 const activeTool = ref<ToolId>('uuid');
 const searchQuery = ref('');
-const favorites = ref<ToolId[]>(readStorage<ToolId[]>('wabi_favorites', ['uuid', 'jwt', 'myip']));
+const favorites = ref<ToolId[]>(readStorage<ToolId[]>('yuzi_favorites', ['uuid', 'jwt', 'myip']));
 const toasts = ref<ToastMessage[]>([]);
 
 const categoryTools = computed(() => {
@@ -115,7 +115,7 @@ function toggleFavorite(toolId: ToolId): void {
   favorites.value = favorites.value.includes(toolId)
     ? favorites.value.filter((item) => item !== toolId)
     : [...favorites.value, toolId];
-  writeStorage('wabi_favorites', favorites.value);
+  writeStorage('yuzi_favorites', favorites.value);
 }
 
 function showNotice(title: string, type: ToastType = 'success'): void {
@@ -245,7 +245,7 @@ function dismissToast(id: number): void {
 
     <footer class="site-footer">
       <div>
-        <strong>Wabi Toolkit</strong>
+        <strong>Yuzi Toolkit</strong>
         <span>安靜、快速、沒有多餘追蹤的開發者工具。</span>
       </div>
       <span class="footer-meta">Vue 3 · Vite · client-side first</span>

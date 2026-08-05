@@ -23,7 +23,7 @@ const loading = ref(false);
 const data = ref<WhoisData | null>(null);
 const error = ref('');
 const showRaw = ref(false);
-const history = ref(readStorage<string[]>('wabi_whois_history', ['github.com', 'google.com', '1.1.1.1']));
+const history = ref(readStorage<string[]>('yuzi_whois_history', ['github.com', 'google.com', '1.1.1.1']));
 
 function cleanQuery(value: string): string {
   return value.trim().toLowerCase().replace(/^https?:\/\//, '').split('/')[0].split('?')[0];
@@ -60,7 +60,7 @@ async function lookup(target = query.value): Promise<void> {
       rawRdap: raw,
     };
     history.value = [clean, ...history.value.filter((item) => item !== clean)].slice(0, 8);
-    writeStorage('wabi_whois_history', history.value);
+    writeStorage('yuzi_whois_history', history.value);
   } catch (lookupError) {
     error.value = lookupError instanceof Error ? lookupError.message : '無法連線至 WHOIS / RDAP 伺服器';
     emit('notice', error.value, 'error');
