@@ -1,6 +1,0 @@
-{
-  "name": "和風 IT Tools - 簡約開發者工具箱",
-  "description": "清新日系簡約風格的開發者線上工具箱，提供 UUID 批次生成、日期時間轉換、Base64 編解碼、JWT 調試、SQL 格式化、WHOIS 查詢與 WhatIsMyIP 工具。",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

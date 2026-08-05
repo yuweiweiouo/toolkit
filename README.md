@@ -1,6 +1,6 @@
 # Wabi Toolkit
 
-以 Vue 3 + Vite 重製的瀏覽器端開發者工具箱，參考 `sample/` 的功能與簡約日系視覺語言。
+以 Vue 3 + Vite 重製的瀏覽器端開發者工具箱。
 
 ## 本機開發
 
@@ -24,6 +24,6 @@ npm run preview
 2. 在 repository 的 **Settings → Pages → Build and deployment** 將 Source 設為 **GitHub Actions**。
 3. 之後每次 push 到 `main`，Actions 會自動安裝依賴、執行 typecheck/build，並部署 `dist/`。
 
-Vite 會在 GitHub Actions 中自動使用 `/<repository-name>/` 作為 `base`，因此可直接在 project Pages URL 正常載入資源。
+此專案使用自訂網域 `toolbox.yuweiwei.com`，Vite 的 `base` 固定為 `/`，資源會從 `https://toolbox.yuweiwei.com/assets/` 載入。`public/CNAME` 會在建置時一併複製到 `dist/`，保留 GitHub Pages 的自訂網域設定。
 
 WHOIS 與 IP 查詢會從瀏覽器連線公開 RDAP / IP API；其餘轉換工具均在本機執行。
