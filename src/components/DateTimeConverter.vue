@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Check, Clock3, Copy, Globe2 } from 'lucide-vue-next';
 import ToolHeader from './ToolHeader.vue';
 import { copyText } from '../utils';
 
-type TimeUnit = 'seconds' | 'milliseconds';
+type TimeUnit = 'seconds' | 'milliseconds' | 'nanoseconds';
+interface ParsedTimestamp {
+  date: Date;
+  nanoseconds: bigint;
+}
+
 const emit = defineEmits<{ notice: [message: string, type?: 'success' | 'info' | 'error'] }>();
 const unit = ref<TimeUnit>('seconds');
 const live = ref(true);
@@ -14,7 +19,10 @@ const copied = ref('');
 let timer: number | undefined;
 
 function nowValue(): string {
-  return unit.value === 'seconds' ? String(Math.floor(Date.now() / 1000)) : String(Date.now());
+  const milliseconds = Date.now();
+  if (unit.value === 'seconds') return String(Math.floor(milliseconds / 1000));
+  if (unit.value === 'nanoseconds') return (BigInt(milliseconds) * 1_000_000n).toString();
+  return String(milliseconds);
 }
 
 function syncNow(): void {
@@ -26,9 +34,6 @@ function setLive(value: boolean): void {
   if (value) syncNow();
 }
 
-watch(unit, () => {
-  if (live.value) syncNow();
-});
 onMounted(() => {
   timer = window.setInterval(syncNow, 1000);
 });
@@ -36,15 +41,49 @@ onBeforeUnmount(() => {
   if (timer) window.clearInterval(timer);
 });
 
-const currentDate = computed(() => {
-  if (!timestamp.value.trim() || !/^[-+]?\d+(\.\d+)?$/.test(timestamp.value.trim())) return null;
-  const number = Number(timestamp.value);
-  const date = new Date(unit.value === 'seconds' ? number * 1000 : number);
-  return Number.isNaN(date.getTime()) ? null : date;
-});
+function parseTimestamp(value: string, selectedUnit: TimeUnit): ParsedTimestamp | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  try {
+    if (selectedUnit === 'nanoseconds') {
+      if (!/^[+-]?\d+$/.test(trimmed)) return null;
+      const nanoseconds = BigInt(trimmed);
+      const milliseconds = nanoseconds / 1_000_000n;
+      const date = new Date(Number(milliseconds));
+      return Number.isNaN(date.getTime()) ? null : { date, nanoseconds };
+    }
+
+    if (!/^[+-]?\d+(\.\d+)?$/.test(trimmed)) return null;
+    const number = Number(trimmed);
+    const milliseconds = selectedUnit === 'seconds' ? number * 1000 : number;
+    const date = new Date(milliseconds);
+    if (Number.isNaN(date.getTime())) return null;
+    return { date, nanoseconds: BigInt(Math.trunc(date.getTime())) * 1_000_000n };
+  } catch {
+    return null;
+  }
+}
+
+function formatDateAsTimestamp(date: Date, selectedUnit: TimeUnit): string {
+  const milliseconds = date.getTime();
+  if (selectedUnit === 'seconds') return String(Math.floor(milliseconds / 1000));
+  if (selectedUnit === 'nanoseconds') return (BigInt(milliseconds) * 1_000_000n).toString();
+  return String(milliseconds);
+}
+
+function setUnit(nextUnit: TimeUnit): void {
+  const parsed = parseTimestamp(timestamp.value, unit.value);
+  unit.value = nextUnit;
+  timestamp.value = live.value ? nowValue() : parsed ? formatDateAsTimestamp(parsed.date, nextUnit) : timestamp.value;
+}
+
+const parsedTimestamp = computed(() => parseTimestamp(timestamp.value, unit.value));
+const currentDate = computed(() => parsedTimestamp.value?.date ?? null);
 const isValid = computed(() => currentDate.value !== null);
 const seconds = computed(() => currentDate.value ? String(Math.floor(currentDate.value.getTime() / 1000)) : '-');
 const milliseconds = computed(() => currentDate.value ? String(currentDate.value.getTime()) : '-');
+const nanoseconds = computed(() => parsedTimestamp.value?.nanoseconds.toString() ?? '-');
 const iso = computed(() => currentDate.value?.toISOString() ?? '-');
 const utc = computed(() => currentDate.value?.toUTCString() ?? '-');
 const localTime = computed(() => currentDate.value
@@ -79,14 +118,14 @@ function applyPreset(type: 'now' | 'todayStart' | 'todayEnd' | 'monthStart' | 'h
   if (type === 'hourAgo') date.setTime(date.getTime() - 3600 * 1000);
   if (type === 'dayLater') date.setTime(date.getTime() + 86400 * 1000);
   setLive(type === 'now');
-  timestamp.value = unit.value === 'seconds' ? String(Math.floor(date.getTime() / 1000)) : String(date.getTime());
+  timestamp.value = formatDateAsTimestamp(date, unit.value);
 }
 
 function handleDate(value: string): void {
   if (!value) return;
   setLive(false);
   const date = new Date(value);
-  timestamp.value = unit.value === 'seconds' ? String(Math.floor(date.getTime() / 1000)) : String(date.getTime());
+  timestamp.value = formatDateAsTimestamp(date, unit.value);
 }
 
 async function copyValue(key: string, value: string): Promise<void> {
@@ -103,6 +142,7 @@ async function copyValue(key: string, value: string): Promise<void> {
 const results = computed(() => [
   { key: 'seconds', label: 'Unix 時間戳記 (秒)', value: seconds.value, wide: false },
   { key: 'milliseconds', label: 'Unix 時間戳記 (毫秒)', value: milliseconds.value, wide: false },
+  { key: 'nanoseconds', label: 'Unix 時間戳記 (奈秒 / ns)', value: nanoseconds.value, wide: false },
   { key: 'local', label: `所選時區時間 (${timezone.value})`, value: localTime.value, wide: true },
   { key: 'era', label: '日本和曆表記', value: japaneseEra.value, wide: false },
   { key: 'relative', label: '相對時間', value: relative.value, wide: false },
@@ -113,7 +153,7 @@ const results = computed(() => [
 
 <template>
   <div class="tool-page">
-    <ToolHeader title="日期時間轉換器" description="Unix 時間戳記與 ISO 8601、和曆、多時區雙向精確轉換。">
+  <ToolHeader title="日期時間轉換器" description="Unix 秒、毫秒、奈秒時間戳記與 ISO 8601、和曆、多時區雙向精確轉換。">
       <template #actions>
         <button type="button" class="button" :class="live ? 'button-dark' : 'button-light'" @click="setLive(!live)">
           <Clock3 :size="15" :class="{ 'spin-slow': live }" />{{ live ? '實時更新中' : '暫停實時' }}
@@ -124,7 +164,7 @@ const results = computed(() => [
     <section class="panel input-panel">
       <div class="two-column-fields">
         <div class="field-group">
-          <div class="field-label-row"><label for="timestamp">Unix 時間戳記</label><button type="button" class="unit-button" @click="unit = unit === 'seconds' ? 'milliseconds' : 'seconds'">{{ unit }}</button></div>
+          <div class="field-label-row"><label for="timestamp">Unix 時間戳記</label><select :value="unit" class="unit-select" aria-label="Unix 時間戳記單位" @change="setUnit(($event.target as HTMLSelectElement).value as TimeUnit)"><option value="seconds">seconds · 秒</option><option value="milliseconds">milliseconds · 毫秒</option><option value="nanoseconds">nanoseconds · 奈秒</option></select></div>
           <input id="timestamp" v-model="timestamp" class="text-input mono-input" type="text" placeholder="輸入時間戳記..." @input="live = false" />
         </div>
         <div class="field-group">
