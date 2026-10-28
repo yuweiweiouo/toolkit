@@ -3,6 +3,7 @@ export type ToolId =
   | 'list'
   | 'datetime'
   | 'base64'
+  | 'json'
   | 'jwt'
   | 'sql'
   | 'whois'

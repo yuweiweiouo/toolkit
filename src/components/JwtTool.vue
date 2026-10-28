@@ -16,8 +16,8 @@ import ToolHeader from './ToolHeader.vue';
 import { copyText, decodeBase64Utf8, encodeBase64Utf8 } from '../utils';
 
 const SAMPLE_TOKENS = {
-  valid: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IuOCjOaWhSBVc2VyIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE5Mjc3Mzk3NDIsImlzcyI6IldhYmkgVG9vbHMgU3R1ZGlvIiwicm9sZSI6ImFkbWluIn0.c2FtcGxlX3NpZ25hdHVyZV92YWxpZF9leGFtcGxl',
-  expired: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ODc2NTQzMjEwIiwibmFtZSI6IuabuOacn1VzZXIiLCJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTYxMDAwMDAwMCwicm9sZSI6InVzZXIifQ.ZXhwaXJlZF9zaWduYXR1cmVfZXhhbXBsZQ',
+  valid: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IuOCjOaWhSBVc2VyIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE5Mjc3Mzk3NDIsImlzcyI6IldhYmkgVG9vbHMgU3R1ZGlvIiwicm9sZSI6ImFkbWluIn0.KhTJMg0yp21Rr3uVBwYstOwokqxE9Et2o9vVggwFupQ',
+  expired: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ODc2NTQzMjEwIiwibmFtZSI6IuabuOacn1VzZXIiLCJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTYxMDAwMDAwMCwicm9sZSI6InVzZXIifQ.YSFKcIUqwgl9mST68MZRgDUeMwJnjQJf5vMOLgxkuNU',
 };
 
 type ClaimType = 'string' | 'number' | 'boolean' | 'null' | 'json';
@@ -53,6 +53,14 @@ const claimRows = ref<ClaimRow[]>([]);
 const now = ref(Date.now());
 let nextClaimId = 0;
 let clockTimer: number | undefined;
+
+// ponytail: 只支援 HS*；RS/ES 需要 PEM 金鑰匯入，有需求再加
+async function hmacSign(alg: HmacAlgorithm, key: string, data: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey('raw', encoder.encode(key), { name: 'HMAC', hash: `SHA-${alg.slice(2)}` }, false, ['sign']);
+  const bytes = new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(data)));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -115,6 +123,26 @@ function parseToken(): void {
 }
 
 watch(token, parseToken, { immediate: true });
+
+const verifyState = ref<'verified' | 'invalid' | 'unsupported' | ''>('');
+watch(
+  [token, secret],
+  async () => {
+    const parts = token.value.trim().split('.');
+    if (parseError.value || parts.length !== 3) return (verifyState.value = '');
+    let alg: unknown;
+    try {
+      alg = JSON.parse(decodeBase64Utf8(parts[0], true)).alg;
+    } catch {
+      return (verifyState.value = '');
+    }
+    if (alg !== 'HS256' && alg !== 'HS384' && alg !== 'HS512') return (verifyState.value = 'unsupported');
+    const current = token.value;
+    const expected = await hmacSign(alg, secret.value, `${parts[0]}.${parts[1]}`);
+    if (current === token.value) verifyState.value = expected === parts[2] ? 'verified' : 'invalid';
+  },
+  { immediate: true },
+);
 
 const claimState = computed(() => {
   const value: Record<string, unknown> = {};
@@ -247,7 +275,7 @@ async function copyPayload(): Promise<void> {
   }
 }
 
-function regenerate(): void {
+async function regenerate(): Promise<void> {
   if (claimErrors.value.length) {
     emit('notice', claimErrors.value[0], 'error');
     return;
@@ -259,7 +287,7 @@ function regenerate(): void {
     headerObject.alg = algorithm.value;
     const headerPart = encodeBase64Utf8(JSON.stringify(headerObject), true);
     const payloadPart = encodeBase64Utf8(JSON.stringify(claimState.value.value), true);
-    const signaturePart = encodeBase64Utf8(`secret:${secret.value}:${headerPart}.${payloadPart}`, true).slice(0, 43);
+    const signaturePart = await hmacSign(algorithm.value, secret.value, `${headerPart}.${payloadPart}`);
     token.value = `${headerPart}.${payloadPart}.${signaturePart}`;
     emit('notice', '已根據 Claim 編輯內容重新生成 JWT');
   } catch (error) {
@@ -329,9 +357,16 @@ function regenerate(): void {
         </section>
 
         <section class="panel signature-block">
-          <div class="signature-heading"><span><i />GENERATE SIGNATURE / HMAC</span><select v-model="algorithm"><option value="HS256">HMAC SHA-256 (HS256)</option><option value="HS384">HMAC SHA-384 (HS384)</option><option value="HS512">HMAC SHA-512 (HS512)</option></select></div>
+          <div class="signature-heading"><span><i />VERIFY & SIGN / HMAC</span><select v-model="algorithm"><option value="HS256">HMAC SHA-256 (HS256)</option><option value="HS384">HMAC SHA-384 (HS384)</option><option value="HS512">HMAC SHA-512 (HS512)</option></select></div>
           <div class="secret-row"><label>Secret Key</label><input v-model="secret" type="text" placeholder="輸入簽名密鑰..." /></div>
           <div class="signature-value"><small>Current Signature Part</small><code>{{ signature || 'No Signature' }}</code></div>
+          <div v-if="verifyState" class="jwt-expiration-card" :class="verifyState === 'verified' ? 'status-valid' : verifyState === 'invalid' ? 'status-expired' : 'status-invalid'">
+            <div class="jwt-expiration-icon"><ShieldCheck v-if="verifyState === 'verified'" :size="19" /><ShieldAlert v-else :size="19" /></div>
+            <div class="jwt-expiration-copy">
+              <strong>{{ verifyState === 'verified' ? 'Signature Verified' : verifyState === 'invalid' ? 'Invalid Signature' : '不支援的演算法' }}</strong>
+              <span>{{ verifyState === 'verified' ? '簽名與目前 Secret 相符' : verifyState === 'invalid' ? '簽名與目前 Secret 不符' : '僅支援 HS256 / HS384 / HS512 驗證' }}</span>
+            </div>
+          </div>
           <button type="button" class="button button-accent full-button" :disabled="!!claimErrors.length" @click="regenerate">更新並重新生成 Token</button>
         </section>
       </div>

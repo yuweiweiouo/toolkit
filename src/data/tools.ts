@@ -17,7 +17,7 @@ export const categories: CategoryMeta[] = [
     id: 'convert-format',
     label: '轉換與編碼',
     icon: 'RefreshCw',
-    description: '時間戳轉換與 Base64 編解碼',
+    description: '時間戳轉換、Base64 編解碼與 JSON 整理',
   },
   {
     id: 'security-auth',
@@ -70,10 +70,17 @@ export const tools: ToolMeta[] = [
     icon: 'FileCode2',
   },
   {
+    id: 'json',
+    name: 'JSON 編輯器',
+    category: 'convert-format',
+    description: '驗證、格式化與壓縮 JSON，樹狀結構展開或收合檢視。',
+    icon: 'Braces',
+  },
+  {
     id: 'jwt',
     name: 'JWT 工具與調試器',
     category: 'security-auth',
-    description: '解碼 JWT，分析 Header、Payload Claims 與簽名狀態。',
+    description: '解碼、驗證與簽發 JWT，支援 HS256/384/512 簽名驗證與 Claims 編輯。',
     icon: 'KeyRound',
   },
   {

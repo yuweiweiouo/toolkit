@@ -510,3 +510,13 @@ input[type='checkbox'] { accent-color: var(--green); width: 14px; height: 14px; 
 .tool-page .file-result textarea,
 .tool-page .field-group textarea { font-size: 12px; }
 .tool-page .summary-card strong { font-size: 14px; }
+
+.json-tree { flex: 1; overflow: auto; padding: 14px 16px; color: #464742; font: 11px/1.8 'DM Mono', monospace; }
+.json-node > .json-node, .json-node > .json-leaf { margin-left: 18px; }
+.json-node > summary { cursor: pointer; }
+.json-key { color: #775590; }
+.json-key::after { content: ': '; color: #9b9c94; }
+.json-summary { color: #9b9c94; }
+.json-string { color: #427059; }
+.json-number { color: #b07a2a; }
+.json-boolean, .json-null { color: #b85f54; }

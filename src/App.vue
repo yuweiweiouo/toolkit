@@ -2,6 +2,7 @@
 import { computed, ref, type Component } from 'vue';
 import {
   ArrowRight,
+  Braces,
   Clock3,
   Database,
   FileCode2,
@@ -28,6 +29,7 @@ import UuidGenerator from './components/UuidGenerator.vue';
 import ListTool from './components/ListTool.vue';
 import DateTimeConverter from './components/DateTimeConverter.vue';
 import Base64Tool from './components/Base64Tool.vue';
+import JsonTool from './components/JsonTool.vue';
 import JwtTool from './components/JwtTool.vue';
 import SqlFormatter from './components/SqlFormatter.vue';
 import WhoisLookup from './components/WhoisLookup.vue';
@@ -35,6 +37,7 @@ import MyIpTool from './components/MyIpTool.vue';
 
 const iconMap: Record<string, Component> = {
   ArrowRight,
+  Braces,
   Check,
   CircleAlert,
   Clock3,
@@ -60,6 +63,7 @@ const toolComponents: Record<ToolId, Component> = {
   list: ListTool,
   datetime: DateTimeConverter,
   base64: Base64Tool,
+  json: JsonTool,
   jwt: JwtTool,
   sql: SqlFormatter,
   whois: WhoisLookup,
